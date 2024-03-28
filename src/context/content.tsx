@@ -9,6 +9,11 @@ import { subscriptionsAction } from '../store/actions';
 type SubscribeType = (collectionName: string) => Promise<void>;
 type UnsubscribeType = (collectionName?: string) => Promise<void>;
 type FetchType = (collectionName: string) => Promise<void>;
+type FetchWithOptionsType = (
+  collectionName: string,
+  batch: number,
+  opt: {}
+) => Promise<void | Record | undefined>;
 type CreateType = (collectionName: string, record: {}) => Promise<void | Record | undefined>;
 type UpdateType = (
   collectionName: string,
@@ -21,6 +26,7 @@ interface ContentActions {
   subscribe: SubscribeType;
   unsubscribe: UnsubscribeType;
   fetch: FetchType;
+  fetchWithOptions: FetchWithOptionsType;
   create: CreateType;
   update: UpdateType;
   delete: DeleteType;
@@ -98,11 +104,17 @@ export const ContentProvider = (props: ContentProviderProps) => {
         })
         .catch(tempErrorHandler);
     },
-    create: async (collectionName: string, record: {}) => {
-      return await client
+    fetchWithOptions: async (collectionName: string, batch: number, opt: {}) => {
+      await client
         ?.collection(collectionName)
-        .create(record)
+        .getFullList(batch, opt)
+        .then((records) => {
+          dispatch(recordsAction.setRecords(collectionName, records as Record[]));
+        })
         .catch(tempErrorHandler);
+    },
+    create: async (collectionName: string, record: {}) => {
+      return await client?.collection(collectionName).create(record).catch(tempErrorHandler);
     },
     update: async (collectionName: string, recordId: string, record: {}) => {
       return await client
@@ -111,10 +123,7 @@ export const ContentProvider = (props: ContentProviderProps) => {
         .catch(tempErrorHandler);
     },
     delete: async (collectionName: string, recordId: string) => {
-      return await client
-        ?.collection(collectionName)
-        .delete(recordId)
-        .catch(tempErrorHandler);
+      return await client?.collection(collectionName).delete(recordId).catch(tempErrorHandler);
     },
   };
 
